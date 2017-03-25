@@ -39,6 +39,7 @@ app.set('secretKey', config.CLIENT_SECRET);
 //public endpoint for all trains
 app.get('/api/v1/trains', (request, response) => {
   response.send(app.locals.trains);
+  console.log(app.locals.trains)
 });
 
 // Authentication/Login Endpoint
@@ -68,27 +69,6 @@ app.post('/authenticate', (request, response) => {
   }
 });
 
-
-
-app.patch('/api/v1/trains/:id', (request, checkAuth, response) => {
-  const { train } = request.body;
-  const { id } = request.params;
-  const index = app.locals.trains.findIndex((m) => m.id == id);
-
-  checkAuth(request, response, next)
-
-  if (index === -1) { return response.sendStatus(404); }
-
-  const originalTrain = app.locals.trains[index];
-  app.locals.trains[index] = Object.assign(originalTrain, train);
-
-  return response.status(200).send(app.locals.trains);
-
-});
-
-// =================================================================
-// Helper Functions ===================================================
-// =================================================================
 const checkAuth = (request, response, next) => {
 
   // Check headers/POST body/URL params for an authorization token
@@ -98,7 +78,6 @@ const checkAuth = (request, response, next) => {
 
   if (token) {
     // do a lot of fancy things
-
     jwt.verify(token, app.get('secretKey'), (error, decoded) => {
 
       // If the token is invalid or expired, respond with an error
@@ -115,7 +94,7 @@ const checkAuth = (request, response, next) => {
         request.decoded = decoded;
         next();
       }
-    })
+    });
   }
 
   else {
@@ -125,9 +104,24 @@ const checkAuth = (request, response, next) => {
     });
   }
 };
+
+
+app.patch('/api/v1/trains/:id', checkAuth, (request, response) => {
+  const { train } = request.body;
+  const { id } = request.params;
+  const index = app.locals.trains.findIndex((m) => m.id == id);
+
+  if (index === -1) { return response.sendStatus(404); }
+
+  const originalTrain = app.locals.trains[index];
+  app.locals.trains[index] = Object.assign(originalTrain, train);
+
+  return response.json(app.locals.trains);
+});
+
 // =================================================================
 // start the server ================================================
 // =================================================================
 
 app.listen(3001);
-console.log('Listening on http://localhost:3001');
+console.log(`Listening on http://localhost:3001, ${config.CLIENT_SECRET}`);
